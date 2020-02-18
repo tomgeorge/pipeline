@@ -59,7 +59,7 @@ func (h *Handler) Download(ctx context.Context) (*Resource, error) {
 
 	// Statuses
 	h.logger.Info("finding combined status")
-	status, out, err := h.client.Repositories.ListStatus(ctx, h.repo, pr.Sha, scm.ListOptions{})
+	status, out, err := h.client.Repositories.FindCombinedStatus(ctx, h.repo, pr.Sha)
 	if err != nil {
 		body, _ := ioutil.ReadAll(out.Body)
 		defer out.Body.Close()
@@ -84,7 +84,7 @@ func (h *Handler) Download(ctx context.Context) (*Resource, error) {
 
 	r := &Resource{
 		PR:       pr,
-		Statuses: status,
+		Statuses: status.Statuses,
 		Comments: comments,
 	}
 	populateManifest(r)
@@ -266,14 +266,14 @@ func (h *Handler) uploadStatuses(ctx context.Context, statuses []*scm.Status, sh
 	}
 
 	h.logger.Infof("Looking for existing status on %s", sha)
-	cs, _, err := h.client.Repositories.ListStatus(ctx, h.repo, sha, scm.ListOptions{})
+	cs, _, err := h.client.Repositories.FindCombinedStatus(ctx, h.repo, sha)
 	if err != nil {
 		return err
 	}
 
 	// Index the statuses so we can avoid sending them if they already exist.
 	csMap := map[string]scm.State{}
-	for _, s := range cs {
+	for _, s := range cs.Statuses {
 		csMap[s.Label] = s.State
 	}
 
